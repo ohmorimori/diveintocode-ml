@@ -11,8 +11,8 @@ from get_mini_batch import GetMiniBatch
 from layer import FullyConnectedLayer
 from initializer import HeInitializer
 from optimizer import AdaGrad
-from activater import ReLU
-from activater import Softmax
+from activator import ReLU
+from activator import Softmax
 
 import time
 import numpy as np
