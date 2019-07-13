@@ -1,0 +1,3 @@
+[submodule "team_a_groupwork_self_checkout"]
+	path = team_a_groupwork_self_checkout
+	url = https://github.com/y9dai/self_checkout
