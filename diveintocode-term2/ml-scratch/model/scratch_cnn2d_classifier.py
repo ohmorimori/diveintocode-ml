@@ -8,7 +8,7 @@ from collections import OrderedDict
 from get_mini_batch import GetMiniBatch
 from optimizer_2 import SGD, Momentum, Nesterov, AdaGrad, RMSprop, Adam
 from activator_2 import Relu, Softmax
-from layer import Conv2D, MaxPooling, Flatten, Affine
+from layer import Conv2D, MaxPooling2D, Flatten, Affine
 
 class Scratch2dCNNClassifier():
     def __init__(
@@ -88,7 +88,7 @@ class Scratch2dCNNClassifier():
         self.layers = OrderedDict()
         self.layers['Conv1'] = Conv2D(self.params['W1'], self.params['b1'], filter_stride, filter_pad)
         self.layers['Relu1'] = Relu()
-        self.layers['Pool1'] = MaxPooling(pool_h=pool_size, pool_w=pool_size, stride=pool_size)
+        self.layers['Pool1'] = MaxPooling2D(pool_h=pool_size, pool_w=pool_size, stride=pool_size)
         #ここにFlatten()挟む
         self.layers['Flatten1'] = Flatten()
         self.layers['Affine1'] = Affine(self.params['W2'], self.params['b2'])

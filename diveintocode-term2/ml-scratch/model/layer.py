@@ -234,7 +234,7 @@ class Conv2D():
         dx = col2im(col=dcol, input_shape=self.x.shape, filter_h=FH, filter_w=FW, stride=self.stride, pad=self.pad)
         return dx
 
-class MaxPooling():
+class MaxPooling2D():
     def __init__(self, pool_h, pool_w, stride=1, pad=0):
         self.pool_h = pool_h
         self.pool_w = pool_w
@@ -302,3 +302,5 @@ class Flatten():
     def backward(self, dout):
         #(N, C*H*W)を(N, C, H, W)に
         return (dout.reshape(self.prev_layer_shape))
+
+
