@@ -4,7 +4,7 @@ if (dir_str not in sys.path):
     sys.path.append(dir_str)
 
 import numpy as np
-from change_shape import im2col, col2im
+from change_shape import get_output_size, im2col, col2im, im2col_1d, col2im_1d
 class FullyConnectedLayer:
     """
     ノード数n_nodes1からn_nodes2への全結合層
@@ -209,8 +209,8 @@ class Conv2D():
         #filter shape
         FN, C, FH, FW = self.W.shape
         N, C, H, W = x.shape
-        out_h = int(1 + (H + 2 * self.pad - FH) / self.stride)
-        out_w = int(1 + (W + 2 * self.pad - FW) / self.stride)
+        out_h = get_output_size(H, FH, self.stride, self.pad)
+        out_w = get_output_size(W, FW, self.stride, self.pad)
         col = im2col(input_data=x, filter_h=FH, filter_w=FW, stride=self.stride, pad=self.pad)
         col_W = self.W.reshape(FN, -1).T #フィルターを展開
         out = col @ col_W + self.b
@@ -245,8 +245,9 @@ class MaxPooling2D():
 
     def forward(self, x):
         N, C, H, W = x.shape
-        out_h = int(1 + (H - self.pool_h) / self.stride)
-        out_w = int(1 + (W - self.pool_w) / self.stride)
+
+        out_h = get_output_size(H, self.pool_h, self.stride, self.pad)
+        out_w = get_output_size(W, self.pool_w, self.stride, self.pad)
 
         col = im2col(x, self.pool_h, self.pool_w, self.stride, self.pad)
         col = col.reshape(-1, self.pool_h * self.pool_w)
@@ -303,4 +304,73 @@ class Flatten():
         #(N, C*H*W)を(N, C, H, W)に
         return (dout.reshape(self.prev_layer_shape))
 
+class Conv1D():
+    def __init__(self, W, b, stride=1, pad=0):
+        self.W, self.b = W, b
+        self.stride = stride
+        self.pad = pad
+        self.x =None
+        self.col = None
+        self.col_W = None
+        self.dW = None
+        self.db = None
 
+    def forward(self, x):
+
+        FN, C, FL = self.W.shape #n_filters, n_channels, filter_length
+        N, C, L = x.shape #batch_size, n_channels, n_features
+        out_size = get_output_size(L, FL, stride=self.stride, pad=self.pad)
+        col = im2col_1d(input_data=x, filter_size=FL, stride=self.stride, pad=self.pad)
+
+        out = col @ self.W.reshape(FN, -1).T + self.b
+        out = out.reshape(N, out_size, -1).transpose(0, 2, 1)
+        self.x = x
+        self.col = col
+        return out
+
+
+    def backward(self, dout):
+        FN, C, FL = self.W.shape #n_filters, n_channels, filter_length
+        N, C, L = self.x.shape
+        dout = dout.transpose(0, 2, 1).reshape(-1, FN)
+
+        self.db = np.sum(dout, axis=0)
+        self.dW = self.col.T @ dout
+        self.dW = self.dW.transpose(1, 0).reshape(FN, C, FL)
+        dcol = dout @ self.W.reshape(FN, -1)
+
+        dx = col2im_1d(col=dcol, input_shape=self.x.shape, filter_size=FL, stride=self.stride, pad=self.pad)
+        return dx
+
+
+class MaxPooling1D():
+    def __init__(self, pool_size, stride=1, pad=0):
+        self.pool_size = pool_size
+        self.stride = stride
+        self.pad = pad
+        self.x = None
+        self.arg_max=None
+
+    def forward(self, x):
+        N, C, L = x.shape #batch_size, n_channels, n_features
+        out_size = get_output_size(L, self.pool_size, stride=self.stride, pad=self.pad)
+
+        col = im2col_1d(x, self.pool_size, self.stride, self.pad)
+        col = col.reshape(-1, self.pool_size)
+
+        arg_max = np.argmax(col, axis=1)
+        out = np.max(col, axis=1)
+        out = out.reshape(N, out_size, C).transpose(0, 2, 1)
+
+        self.x = x
+        self.arg_max = arg_max
+        return out
+
+    def backward(self, dout):
+        dout = dout.transpose(0, 2, 1)
+        dmax = np.zeros((dout.size, self.pool_size))
+        dmax[np.arange(self.arg_max.size), self.arg_max.flatten()] = dout.flatten()
+        dmax = dmax.reshape(dout.shape + (self.pool_size, ))
+        dcol = dmax.reshape(dmax.shape[0] * dmax.shape[2], -1)
+        dx = col2im_1d(col=dcol, input_shape=self.x.shape, filter_size=self.pool_size, stride=self.stride, pad=self.pad)
+        return dx

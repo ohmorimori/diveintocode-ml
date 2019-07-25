@@ -9,9 +9,9 @@ from get_mini_batch import GetMiniBatch
 from change_shape import get_output_size
 from optimizer_2 import SGD, Momentum, Nesterov, AdaGrad, RMSprop, Adam
 from activator_2 import Relu, Softmax
-from layer import Conv2D, MaxPooling2D, Flatten, Affine
+from layer import Conv1D, MaxPooling1D, Flatten, Affine
 
-class Scratch2dCNNClassifier():
+class Scratch1dCNNClassifier():
     def __init__(
         self, conv_param={'n_filters': 30, 'filter_size': 3, 'stride': 1, 'pad': 0},
         pool_param={'pool_size': 2},
@@ -63,22 +63,21 @@ class Scratch2dCNNClassifier():
 
     def _gen_layers(self):
         """
-        x_train: ndarray of shape(n_samples, n_channels, height, width)
+        x_train: ndarray of shape(n_samples, n_channels, n_features)
         """
-        #とりあえず画像サイズは正方形を想定し、input_size= heightとする
-        self.n_train_samples, n_channels, input_size, _ = self.x_train.shape
+        self.n_train_samples, n_channels, n_features = self.x_train.shape
         n_filters = self.conv_param['n_filters']
         filter_size = self.conv_param['filter_size']
         filter_stride = self.conv_param['stride']
         filter_pad = self.conv_param['pad']
         pool_size = self.pool_param['pool_size']
 
-        conv_output_size = get_output_size(input_size, filter_size, filter_stride, filter_pad)
-        pool_output_size = int(n_filters * np.power(conv_output_size/ pool_size, 2))
+        conv_output_size = get_output_size(n_features, filter_size, filter_stride, filter_pad)
+        pool_output_size = int(n_filters * conv_output_size/ pool_size)
 
         #initialize hyper parameters
         self.params ={}
-        self.params['W1'] = self.weight_init_std * np.random.randn(n_filters, n_channels, filter_size, filter_size)
+        self.params['W1'] = self.weight_init_std * np.random.randn(n_filters, n_channels, filter_size)
         self.params['b1'] = np.zeros(n_filters)
         self.params['W2'] = self.weight_init_std * np.random.randn(pool_output_size, self.layer_nodes['hidden'])
         self.params['b2'] = np.zeros(self.layer_nodes['hidden'])
@@ -87,9 +86,9 @@ class Scratch2dCNNClassifier():
 
         #generate layers
         self.layers = OrderedDict()
-        self.layers['Conv1'] = Conv2D(self.params['W1'], self.params['b1'], filter_stride, filter_pad)
+        self.layers['Conv1'] = Conv1D(self.params['W1'], self.params['b1'], filter_stride, filter_pad)
         self.layers['Relu1'] = Relu()
-        self.layers['Pool1'] = MaxPooling2D(pool_h=pool_size, pool_w=pool_size, stride=pool_size)
+        self.layers['Pool1'] = MaxPooling1D(pool_size=pool_size, stride=pool_size)
         self.layers['Flatten1'] = Flatten()
         self.layers['Affine1'] = Affine(self.params['W2'], self.params['b2'])
         self.layers['Relu2'] = Relu()
